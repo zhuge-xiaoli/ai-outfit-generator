@@ -32,64 +32,65 @@ class VisionService:
 只输出JSON，不要其他内容。"""
 
         try:
-            # 通义千问 API 调用
-            with httpx.Client(timeout=180.0) as client:
-                response = client.post(
-                    f"{self.base_url}/services/aigc/multimodal-generation/generation",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                        "X-DashScope-Async": "disable"
+            # 通义千问 API 调用 - 使用更长的超时
+            client = httpx.Client(timeout=httpx.Timeout(300.0, connect=30.0))
+            response = client.post(
+                f"{self.base_url}/services/aigc/multimodal-generation/generation",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "X-DashScope-Async": "disable"
+                },
+                json={
+                    "model": self.model,
+                    "input": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "image": f"data:image/jpeg;base64,{image_base64}"
+                                    },
+                                    {
+                                        "text": prompt
+                                    }
+                                ]
+                            }
+                        ]
                     },
-                    json={
-                        "model": self.model,
-                        "input": {
-                            "messages": [
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "image": f"data:image/jpeg;base64,{image_base64}"
-                                        },
-                                        {
-                                            "text": prompt
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        "parameters": {
-                            "max_tokens": 1000,
-                            "result_format": "message"
-                        }
+                    "parameters": {
+                        "max_tokens": 1000,
+                        "result_format": "message"
                     }
-                )
+                }
+            )
+            client.close()
 
-                if response.status_code != 200:
-                    return {"success": False, "error": f"API错误: {response.text}"}
+            if response.status_code != 200:
+                return {"success": False, "error": f"API错误: {response.text}"}
 
-                result = response.json()
-                content = result["output"]["choices"][0]["message"]["content"][0]["text"]
+            result = response.json()
+            content = result["output"]["choices"][0]["message"]["content"][0]["text"]
 
-                # 尝试解析JSON
-                try:
-                    data = json.loads(content)
-                except json.JSONDecodeError:
-                    import re
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
-                    if match:
-                        data = json.loads(match.group())
-                    else:
-                        data = {
-                            "服装类型": "未知",
-                            "颜色": "未知",
-                            "款式特征": "未知",
-                            "面料质感": "未知",
-                            "适用场景": "未知",
-                            "搭配建议": "未知"
-                        }
+            # 尝试解析JSON
+            try:
+                data = json.loads(content)
+            except json.JSONDecodeError:
+                import re
+                match = re.search(r'\{.*\}', content, re.DOTALL)
+                if match:
+                    data = json.loads(match.group())
+                else:
+                    data = {
+                        "服装类型": "未知",
+                        "颜色": "未知",
+                        "款式特征": "未知",
+                        "面料质感": "未知",
+                        "适用场景": "未知",
+                        "搭配建议": "未知"
+                    }
 
-                return {"success": True, "data": data}
+            return {"success": True, "data": data}
 
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -114,61 +115,62 @@ class VisionService:
 只输出JSON，不要其他内容。"""
 
         try:
-            with httpx.Client(timeout=180.0) as client:
-                response = client.post(
-                    f"{self.base_url}/services/aigc/multimodal-generation/generation",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                        "X-DashScope-Async": "disable"
+            client = httpx.Client(timeout=httpx.Timeout(300.0, connect=30.0))
+            response = client.post(
+                f"{self.base_url}/services/aigc/multimodal-generation/generation",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "X-DashScope-Async": "disable"
+                },
+                json={
+                    "model": self.model,
+                    "input": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "image": f"data:image/jpeg;base64,{image_base64}"
+                                    },
+                                    {
+                                        "text": prompt
+                                    }
+                                ]
+                            }
+                        ]
                     },
-                    json={
-                        "model": self.model,
-                        "input": {
-                            "messages": [
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "image": f"data:image/jpeg;base64,{image_base64}"
-                                        },
-                                        {
-                                            "text": prompt
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        "parameters": {
-                            "max_tokens": 1000,
-                            "result_format": "message"
-                        }
+                    "parameters": {
+                        "max_tokens": 1000,
+                        "result_format": "message"
                     }
-                )
+                }
+            )
+            client.close()
 
-                if response.status_code != 200:
-                    return {"success": False, "error": f"API错误: {response.text}"}
+            if response.status_code != 200:
+                return {"success": False, "error": f"API错误: {response.text}"}
 
-                result = response.json()
-                content = result["output"]["choices"][0]["message"]["content"][0]["text"]
+            result = response.json()
+            content = result["output"]["choices"][0]["message"]["content"][0]["text"]
 
-                try:
-                    data = json.loads(content)
-                except json.JSONDecodeError:
-                    import re
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
-                    if match:
-                        data = json.loads(match.group())
-                    else:
-                        data = {
-                            "场景类型": "未知",
-                            "具体描述": "未知",
-                            "光线": "未知",
-                            "背景元素": "未知",
-                            "场景元素": []
-                        }
+            try:
+                data = json.loads(content)
+            except json.JSONDecodeError:
+                import re
+                match = re.search(r'\{.*\}', content, re.DOTALL)
+                if match:
+                    data = json.loads(match.group())
+                else:
+                    data = {
+                        "场景类型": "未知",
+                        "具体描述": "未知",
+                        "光线": "未知",
+                        "背景元素": "未知",
+                        "场景元素": []
+                    }
 
-                return {"success": True, "data": data}
+            return {"success": True, "data": data}
 
         except Exception as e:
             return {"success": False, "error": str(e)}
