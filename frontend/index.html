@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI穿搭提示词生成器</title>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- Element Plus -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <!-- Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        #app {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card */
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .icon {
+            font-size: 18px;
+        }
+
+        /* Upload Section */
+        .upload-section {
+            margin-bottom: 20px;
+        }
+
+        .upload-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .upload-section-title .required {
+            color: #f56c6c;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed #dcdfe6;
+            border-radius: 12px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #409eff;
+            background: #f0f7ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #409eff;
+            background: #e6f0ff;
+        }
+
+        .upload-area.has-image {
+            border-color: #67c23a;
+            border-style: solid;
+            background: #f0f9eb;
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            color: #909399;
+            margin-bottom: 8px;
+        }
+
+        .upload-text {
+            color: #606266;
+            font-size: 14px;
+        }
+
+        .upload-hint {
+            color: #909399;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        /* Preview */
+        .preview-container {
+            position: relative;
+        }
+
+        .preview-image {
+            width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #f5f7fa;
+        }
+
+        .preview-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        /* Action Select - Dropdown */
+        .action-select {
+            margin-top: 20px;
+        }
+
+        .action-select .el-select {
+            width: 100%;
+        }
+
+        .recommended-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+
+        .action-tip {
+            font-size: 12px;
+            color: #909399;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .action-tip .el-icon {
+            color: #409eff;
+        }
+
+        /* Generate Button */
+        .generate-btn {
+            margin-top: 24px;
+            width: 100%;
+            height: 48px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Result Area */
+        .result-section {
+            margin-bottom: 20px;
+        }
+
+        .result-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .result-content {
+            background: #f5f7fa;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 13px;
+            line-height: 1.8;
+            color: #303133;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .result-content.prompt {
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        /* Xiaohongshu Card */
+        .xhx-card {
+            background: #fff2f2;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .xhx-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #eb5757;
+            margin-bottom: 12px;
+        }
+
+        .xhx-content {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
+        .xhx-tags {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .xhx-tag {
+            background: #ffe5e5;
+            color: #eb5757;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        /* Copy Button */
+        .copy-btn {
+            font-size: 12px;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        /* Large Image Preview Modal */
+        .large-preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            cursor: pointer;
+        }
+
+        .large-preview-modal img {
+            max-width: 80%;
+            max-height: 80%;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            cursor: default;
+        }
+
+        .large-preview-modal .close-hint {
+            position: absolute;
+            bottom: 20px;
+            color: #fff;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        /* History Tab */
+        .tab-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #409eff;
+            color: #fff;
+        }
+
+        .tab-btn:not(.active) {
+            background: #f5f7fa;
+            color: #606266;
+        }
+
+        .tab-btn:not(.active):hover {
+            background: #e4e8ec;
+        }
+
+        /* History List */
+        .history-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            border: 1px solid #e4e7ed;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            border-color: #409eff;
+            background: #f0f7ff;
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .history-item-time {
+            font-size: 12px;
+            color: #909399;
+        }
+
+        .history-item-delete {
+            color: #f56c6c;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .history-item-delete:hover {
+            color: #f56c6c;
+            text-decoration: underline;
+        }
+
+        .history-item-preview {
+            font-size: 13px;
+            color: #303133;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #909399;
+        }
+
+        .history-images {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .history-images img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #409eff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 16px;
+            color: #606266;
+            font-size: 14px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #909399;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            padding: 16px;
+            color: #909399;
+            font-size: 12px;
+        }
+
+        /* Error Message */
+        .error-message {
+            background: #fef0f0;
+            border: 1px solid #fde2e2;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            color: #f56c6c;
+            font-size: 14px;
+        }
+
+        /* Scene Analysis Tip */
+        .scene-analysis-tip {
+            background: #f0f9ff;
+            border: 1px solid #bae7ff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #1890ff;
+        }
+
+        /* Action Cards - Grid Layout */
+        .action-cards-container {
+            margin-top: 16px;
+            overflow: visible;
+        }
+
+        .action-card {
+            position: relative;
+            border: 2px solid #e4e7ed;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            background: #fff;
+            overflow: visible;
+            z-index: 1;
+        }
+
+        .action-card:hover {
+            z-index: 10001;
+        }
+
+        .action-card:hover {
+            border-color: #409eff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+        }
+
+        .action-card.selected {
+            border-color: #409eff;
+            background: #f0f7ff;
+        }
+
+        .action-card-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #303133;
+            margin-bottom: 6px;
+        }
+
+        .action-card-desc {
+            font-size: 12px;
+            color: #909399;
+            line-height: 1.4;
+        }
+
+        .action-card .recommended-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+        }
+
+        /* Hover Preview Image */
+        .action-preview {
+            position: absolute;
+            top: -35px;
+            right: -140px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            padding: 8px;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            pointer-events: none;
+            cursor: pointer;
+        }
+
+        .action-card:hover .action-preview {
+            opacity: 1;
+            visibility: visible;
+            z-index: 10000;
+        }
+
+        .action-preview img {
+            width: 100px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            display: block;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <div class="header">
+            <h1>👔 AI穿搭提示词生成器</h1>
+            <p>上传服装和场景图片，智能推荐动作并生成即梦提示词和小红书文案</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-container">
+            <!-- Left: Upload & Settings -->
+            <div class="card">
+                <!-- Error Message -->
+                <div class="error-message" v-if="errorMessage" @click="errorMessage = ''">
+                    {{ errorMessage }} ❌
+                </div>
+
+                <!-- Clothing Image Upload -->
+                <div class="upload-section">
+                    <div class="upload-section-title">
+                        👕 服装图片 <span class="required">*</span>
+                    </div>
+                    <div
+                        class="upload-area"
+                        :class="{ dragover: isDragOverClothing, 'has-image': clothingPreview }"
+                        @click="triggerUpload('clothing')"
+                        @dragover.prevent="isDragOverClothing = true"
+                        @dragleave.prevent="isDragOverClothing = false"
+                        @drop.prevent="handleDrop($event, 'clothing')"
+                    >
+                        <template v-if="!clothingPreview">
+                            <div class="upload-icon">👔</div>
+                            <div class="upload-text">点击或拖拽上传服装图片</div>
+                            <div class="upload-hint">必填</div>
+                        </template>
+                        <template v-else>
+                            <img :src="clothingPreview" class="preview-image" alt="服装预览">
+                            <div class="preview-actions">
+                                <el-button size="small" @click.stop="clearImage('clothing')">删除</el-button>
+                            </div>
+                        </template>
+                    </div>
+                    <input
+                        type="file"
+                        ref="clothingInput"
+                        style="display: none"
+                        accept="image/*"
+                        @change="handleFileSelect($event, 'clothing')"
+                    >
+                </div>
+
+                <!-- Scene Image Upload -->
+                <div class="upload-section">
+                    <div class="upload-section-title">
+                        🏠 场景图片 <span style="color: #909399; font-weight: 400;">（可选）</span>
+                    </div>
+                    <div
+                        class="upload-area"
+                        :class="{ dragover: isDragOverScene, 'has-image': scenePreview }"
+                        @click="triggerUpload('scene')"
+                        @dragover.prevent="isDragOverScene = true"
+                        @dragleave.prevent="isDragOverScene = false"
+                        @drop.prevent="handleDrop($event, 'scene')"
+                    >
+                        <template v-if="!scenePreview">
+                            <div class="upload-icon">🏠</div>
+                            <div class="upload-text">点击或拖拽上传场景图片</div>
+                            <div class="upload-hint">上传后智能推荐匹配动作</div>
+                        </template>
+                        <template v-else>
+                            <img :src="scenePreview" class="preview-image" alt="场景预览">
+                            <div class="preview-actions">
+                                <el-button size="small" @click.stop="clearImage('scene')">删除</el-button>
+                            </div>
+                        </template>
+                    </div>
+                    <input
+                        type="file"
+                        ref="sceneInput"
+                        style="display: none"
+                        accept="image/*"
+                        @change="handleFileSelect($event, 'scene')"
+                    >
+                </div>
+
+                <!-- Scene Analysis Result -->
+                <div class="scene-analysis-tip" v-if="recommendedActions.length > 0">
+                    
+                    已识别场景元素，智能推荐了 {{ recommendedActions.length }} 个匹配动作
+                </div>
+
+                <!-- Action Select - Cards Grid -->
+                <div class="action-cards-container" v-if="allActions.length > 0">
+                    <div class="card-title">
+                        <span class="icon">🎬</span>
+                        选择动作模板
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;">
+                        <div
+                            v-for="action in allActions"
+                            :key="action.id"
+                            class="action-card"
+                            :class="{ selected: selectedAction === action.id }"
+                            @click="selectedAction = action.id"
+                        >
+                            <span
+                                v-if="isRecommended(action.id)"
+                                class="recommended-badge"
+                            >
+                                推荐
+                            </span>
+                            <div class="action-preview" v-if="action.preview">
+                                <img :src="action.preview" :alt="action.name" @click.stop="showLargePreview(action.preview)">
+                            </div>
+                            <div class="action-card-name">{{ action.name }}</div>
+                            <div class="action-card-desc">{{ action.description }}</div>
+                        </div>
+                    </div>
+                    <div class="action-tip" v-if="recommendedActions.length > 0" style="margin-top: 12px;">
+                        💡 带"推荐"标签的动作更适合当前场景
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <el-button
+                    type="primary"
+                    class="generate-btn"
+                    :loading="isGenerating"
+                    :disabled="!clothingPreview"
+                    @click="generate"
+                >
+                    {{ isGenerating ? '生成中...' : '🚀 生成提示词和文案' }}
+                </el-button>
+            </div>
+
+            <!-- Right: Result -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon">📝</span>
+                    生成结果
+                </div>
+
+                <!-- Tab Buttons -->
+                <div class="tab-buttons">
+                    <button class="tab-btn" :class="{ active: currentTab === 'result' }" @click="currentTab = 'result'">
+                        📝 当前结果
+                    </button>
+                    <button class="tab-btn" :class="{ active: currentTab === 'history' }" @click="currentTab = 'history'">
+                        📜 历史记录 ({{ historyList.length }})
+                    </button>
+                </div>
+
+                <!-- Result Tab -->
+                <div v-if="currentTab === 'result'">
+                    <!-- Empty State -->
+                    <div class="empty-state" v-if="!result">
+                        <div class="empty-icon">💡</div>
+                        <div>上传图片并点击生成，查看结果</div>
+                    </div>
+
+                    <!-- Result -->
+                    <div v-else>
+                        <!-- Prompt -->
+                        <div class="result-section">
+                            <div class="result-label">
+                                <span>即梦提示词</span>
+                                <el-button
+                                    class="copy-btn"
+                                    size="small"
+                                    @click="copyToClipboard(result.prompt)"
+                                >
+                                    📋 复制
+                                </el-button>
+                            </div>
+                            <div class="result-content prompt">{{ result.prompt }}</div>
+                        </div>
+
+                        <!-- Xiaohongshu Copy -->
+                        <div class="result-section">
+                            <div class="result-label">
+                                <span>小红书文案</span>
+                                <el-button
+                                    class="copy-btn"
+                                    size="small"
+                                    @click="copyToClipboard(result.xiaohongshu.title + '\n\n' + result.xiaohongshu.content + '\n\n' + result.xiaohongshu.tags.join(' '))"
+                                >
+                                    📋 复制
+                                </el-button>
+                            </div>
+                            <div class="xhx-card">
+                                <div class="xhx-title">{{ result.xiaohongshu.title }}</div>
+                                <div class="xhx-content">{{ result.xiaohongshu.content }}</div>
+                                <div class="xhx-tags">
+                                    <span
+                                        class="xhx-tag"
+                                        v-for="tag in result.xiaohongshu.tags"
+                                        :key="tag"
+                                    >
+                                        {{ tag }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div v-if="currentTab === 'history'">
+                    <div class="history-empty" v-if="historyList.length === 0">
+                        <div class="empty-icon">📜</div>
+                        <div>暂无历史记录</div>
+                        <div style="font-size: 12px; margin-top: 8px;">生成内容后会保存在这里</div>
+                    </div>
+
+                    <div class="history-list" v-else>
+                        <div
+                            class="history-item"
+                            v-for="(item, index) in historyList"
+                            :key="item.id"
+                            @click="viewHistory(item)"
+                        >
+                            <div class="history-item-header">
+                                <span class="history-item-time">{{ formatTime(item.createdAt) }}</span>
+                                <span class="history-item-delete" @click.stop="deleteHistory(index)">删除</span>
+                            </div>
+                            <div class="history-images" v-if="item.clothingImage || item.sceneImage">
+                                <img v-if="item.clothingImage" :src="item.clothingImage" alt="服装">
+                                <img v-if="item.sceneImage" :src="item.sceneImage" alt="场景">
+                            </div>
+                            <div class="history-item-preview">
+                                {{ item.xiaohongshu?.title || '无标题' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            AI穿搭提示词生成器 v1.0 | 基于 DeepSeek API
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" v-if="isGenerating">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">AI 正在分析图片并生成内容...</div>
+        </div>
+
+        <!-- Large Image Preview Modal -->
+        <div class="large-preview-modal" v-if="largePreviewImage" @click="largePreviewImage = ''">
+            <img :src="largePreviewImage" @click.stop>
+            <div class="close-hint">点击任意处关闭</div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, watch } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                // State
+                const clothingInput = ref(null);
+                const sceneInput = ref(null);
+                const clothingPreview = ref('');
+                const clothingBase64 = ref('');
+                const scenePreview = ref('');
+                const sceneBase64 = ref('');
+                const isDragOverClothing = ref(false);
+                const isDragOverScene = ref(false);
+                const isGenerating = ref(false);
+                const allActions = ref([]);
+                const recommendedActions = ref([]);
+                const selectedAction = ref(null);
+                const result = ref(null);
+                const errorMessage = ref('');
+                const largePreviewImage = ref('');
+                const historyList = ref([]);
+                const currentTab = ref('result');
+
+                // Load actions on mount
+                onMounted(async () => {
+                    try {
+                        const res = await axios.get('/api/actions');
+                        allActions.value = res.data.actions;
+                        // Default select first action
+                        if (allActions.value.length > 0) {
+                            selectedAction.value = allActions.value[0].id;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load actions:', e);
+                    }
+                    // 加载历史记录
+                    loadHistory();
+                });
+
+                // 历史记录管理
+                const HISTORY_KEY = 'ai_outfit_history';
+                const MAX_HISTORY = 50;
+
+                const loadHistory = () => {
+                    try {
+                        const saved = localStorage.getItem(HISTORY_KEY);
+                        if (saved) {
+                            historyList.value = JSON.parse(saved);
+                        }
+                    } catch (e) {
+                        console.error('Failed to load history:', e);
+                    }
+                };
+
+                const saveHistory = (data) => {
+                    try {
+                        const item = {
+                            id: Date.now(),
+                            createdAt: new Date().toISOString(),
+                            clothingImage: data.clothingImage,
+                            sceneImage: data.sceneImage,
+                            actionId: data.actionId,
+                            prompt: data.prompt,
+                            xiaohongshu: data.xiaohongshu
+                        };
+                        historyList.value.unshift(item);
+                        // 限制最多50条
+                        if (historyList.value.length > MAX_HISTORY) {
+                            historyList.value = historyList.value.slice(0, MAX_HISTORY);
+                        }
+                        localStorage.setItem(HISTORY_KEY, JSON.stringify(historyList.value));
+                    } catch (e) {
+                        console.error('Failed to save history:', e);
+                    }
+                };
+
+                const deleteHistory = (index) => {
+                    historyList.value.splice(index, 1);
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(historyList.value));
+                    ElMessage.success('已删除');
+                };
+
+                const viewHistory = (item) => {
+                    result.value = {
+                        prompt: item.prompt,
+                        xiaohongshu: item.xiaohongshu
+                    };
+                    currentTab.value = 'result';
+                };
+
+                const formatTime = (isoString) => {
+                    const date = new Date(isoString);
+                    const now = new Date();
+                    const diff = now - date;
+
+                    if (diff < 60000) return '刚刚';
+                    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+                    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+                    if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+
+                    return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                };
+
+                // Upload
+                const triggerUpload = (type) => {
+                    if (type === 'clothing') {
+                        clothingInput.value.click();
+                    } else {
+                        sceneInput.value.click();
+                    }
+                };
+
+                const handleFileSelect = (e, type) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        processFile(file, type);
+                    }
+                };
+
+                const handleDrop = (e, type) => {
+                    if (type === 'clothing') {
+                        isDragOverClothing.value = false;
+                    } else {
+                        isDragOverScene.value = false;
+                    }
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        processFile(file, type);
+                    }
+                };
+
+                const processFile = async (file, type) => {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        if (type === 'clothing') {
+                            clothingPreview.value = e.target.result;
+                            clothingBase64.value = e.target.result.split(',')[1];
+                        } else {
+                            scenePreview.value = e.target.result;
+                            sceneBase64.value = e.target.result.split(',')[1];
+
+                            // 上传场景图片后，自动分析并推荐动作
+                            await recommendActionsForScene(e.target.result);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                };
+
+                // 推荐动作
+                const recommendActionsForScene = async (sceneImage) => {
+                    console.log('Calling recommend-actions API...');
+                    try {
+                        const res = await axios.post('/api/recommend-actions', {
+                            scene_image: sceneImage
+                        });
+
+                        console.log('API response:', res.data);
+
+                        if (res.data.success) {
+                            allActions.value = res.data.all_actions || [];
+                            recommendedActions.value = res.data.recommended || [];
+
+                            console.log('All actions:', allActions.value);
+                            console.log('Recommended actions:', recommendedActions.value);
+
+                            // 如果有推荐动作，默认选择第一个推荐动作
+                            if (recommendedActions.value.length > 0) {
+                                selectedAction.value = recommendedActions.value[0].id;
+                            } else if (allActions.value.length > 0) {
+                                selectedAction.value = allActions.value[0].id;
+                            }
+
+                            if (recommendedActions.value.length > 0) {
+                                ElMessage.success('已根据场景智能推荐动作');
+                            }
+                        } else {
+                            console.error('API error:', res.data.error);
+                            ElMessage.warning('场景分析完成，但未能推荐动作');
+                        }
+                    } catch (e) {
+                        console.error('Failed to recommend actions:', e);
+                        ElMessage.error('场景分析失败，请重试');
+                    }
+                };
+
+                // 检查是否是推荐动作
+                const isRecommended = (actionId) => {
+                    return recommendedActions.value.some(a => a.id === actionId);
+                };
+
+                // 点击动作下拉时提示
+                const checkRecommended = () => {
+                    if (recommendedActions.value.length > 0) {
+                        // 用户在下拉选择，可以选择推荐或其他动作
+                    }
+                };
+
+                // 显示大图预览
+                const showLargePreview = (imageUrl) => {
+                    largePreviewImage.value = imageUrl;
+                };
+
+                const clearImage = (type) => {
+                    if (type === 'clothing') {
+                        clothingPreview.value = '';
+                        clothingBase64.value = '';
+                        if (clothingInput.value) {
+                            clothingInput.value.value = '';
+                        }
+                    } else {
+                        scenePreview.value = '';
+                        sceneBase64.value = '';
+                        if (sceneInput.value) {
+                            sceneInput.value.value = '';
+                        }
+                        // 清空推荐动作
+                        recommendedActions.value = [];
+                        // 重新加载所有动作
+                        loadAllActions();
+                    }
+                    result.value = null;
+                };
+
+                // 加载所有动作
+                const loadAllActions = async () => {
+                    try {
+                        const res = await axios.get('/api/actions');
+                        allActions.value = res.data.actions;
+                        if (allActions.value.length > 0 && !selectedAction.value) {
+                            selectedAction.value = allActions.value[0].id;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load actions:', e);
+                    }
+                };
+
+                // Generate
+                const generate = async () => {
+                    if (!clothingBase64.value) {
+                        ElMessage.warning('请先上传服装图片');
+                        return;
+                    }
+
+                    isGenerating.value = true;
+                    result.value = null;
+                    errorMessage.value = '';
+
+                    try {
+                        const res = await axios.post('/api/generate', {
+                            clothing_image: clothingPreview.value,
+                            scene_image: scenePreview.value || null,
+                            action_id: selectedAction.value
+                        });
+
+                        if (res.data.success) {
+                            result.value = res.data.data;
+                            // 保存到历史记录
+                            saveHistory({
+                                clothingImage: clothingPreview.value,
+                                sceneImage: scenePreview.value,
+                                actionId: selectedAction.value,
+                                ...res.data.data
+                            });
+                            ElMessage.success('生成成功！');
+                        } else {
+                            errorMessage.value = res.data.error || '生成失败';
+                            ElMessage.error('生成失败');
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        errorMessage.value = e.response?.data?.error || '生成失败，请重试';
+                        ElMessage.error('生成失败');
+                    } finally {
+                        isGenerating.value = false;
+                    }
+                };
+
+                // Copy
+                const copyToClipboard = async (text) => {
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        ElMessage.success('复制成功！');
+                    } catch (e) {
+                        ElMessage.error('复制失败');
+                    }
+                };
+
+                return {
+                    clothingInput,
+                    sceneInput,
+                    clothingPreview,
+                    scenePreview,
+                    isDragOverClothing,
+                    isDragOverScene,
+                    isGenerating,
+                    allActions,
+                    recommendedActions,
+                    selectedAction,
+                    result,
+                    errorMessage,
+                    largePreviewImage,
+                    historyList,
+                    currentTab,
+                    triggerUpload,
+                    handleFileSelect,
+                    handleDrop,
+                    clearImage,
+                    generate,
+                    copyToClipboard,
+                    isRecommended,
+                    checkRecommended,
+                    showLargePreview,
+                    deleteHistory,
+                    viewHistory,
+                    formatTime
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
