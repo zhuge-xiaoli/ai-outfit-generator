@@ -18,41 +18,38 @@ class PromptService:
         self.lighting = self.templates["lighting_templates"]
         self.scenes = self.templates["scenes"]
 
-        # 场景元素 → 推荐动作ID映射
+        # 场景元素 → 推荐动作ID映射（仅限有明显道具的场景）
         self.scene_to_actions = {
-            # 椅子/凳子/台阶相关
-            "椅子": ["12", "9"],
-            "凳子": ["12", "9"],
+            # 台阶/楼梯/沙发相关
             "台阶": ["12", "9"],
             "楼梯": ["12", "9"],
             "沙发": ["12", "9"],
+            "凳子": ["12", "9"],
             # 墙面/门框相关
             "墙面": ["10", "2"],
             "门框": ["10", "2"],
-            "栏杆": ["10", "9"],
-            # 路灯/柱子相关
-            "路灯": ["10", "9"],
-            "柱子": ["10", "9"],
-            # 桌子/展示台相关
+            # 桌子/咖啡桌相关
             "桌子": ["7", "6"],
-            "展示台": ["7", "6"],
             "咖啡桌": ["7", "6"],
-            # 书架/商品架相关
-            "书架": ["7", "6"],
-            "货架": ["7", "6"],
-            "展示架": ["7", "6"],
             # 街道/道路相关
             "街道": ["3", "8"],
             "道路": ["3", "8"],
-            # 窗户/采光好的室内
-            "窗户": ["7", "2"],
-            "窗": ["7", "2"],
         }
 
-    def recommend_actions(self, scene_info: dict) -> list:
-        """根据场景信息推荐匹配的动作"""
+        # 万金油动作 - 适合任何场景
+        self.universal_action_ids = ["4", "5", "6"]
+
+    def recommend_actions(self, scene_info: dict) -> tuple:
+        """
+        根据场景信息推荐匹配的动作
+        返回 (specific_recommended, universal)
+        specific_recommended: 基于特定场景元素推荐的动作
+        universal: 万金油动作（始终返回）
+        """
+        universal = [a for a in self.actions if a["id"] in self.universal_action_ids]
+
         if not scene_info:
-            return []
+            return [], universal
 
         scene_elements = scene_info.get("场景元素", [])
         if isinstance(scene_elements, str):
@@ -63,7 +60,7 @@ class PromptService:
                 scene_elements = []
 
         if not scene_elements:
-            return []
+            return [], universal
 
         recommended_ids = set()
         for element in scene_elements:
@@ -73,9 +70,10 @@ class PromptService:
                     recommended_ids.update(action_ids)
 
         if not recommended_ids:
-            return []
+            return [], universal
 
-        return [a for a in self.actions if a["id"] in recommended_ids]
+        specific = [a for a in self.actions if a["id"] in recommended_ids]
+        return specific, universal
 
     def generate_prompt(self, clothing_info: dict, action_id: str = None, scene_type: str = None) -> str:
         """

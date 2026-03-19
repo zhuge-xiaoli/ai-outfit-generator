@@ -69,14 +69,20 @@ async def recommend_actions(request: RecommendActionsRequest):
 
         scene_info = scene_result["data"]
 
-        # 根据场景信息推荐动作
-        recommended = prompt_service.recommend_actions(scene_info)
+        # 根据场景信息推荐动作（返回 tuple: specific_recommended, universal）
+        specific, universal = prompt_service.recommend_actions(scene_info)
 
-        # 返回推荐动作和全部动作
+        # 合并推荐动作（万金油 + 特定场景推荐去重）
+        all_recommended_ids = set(a["id"] for a in universal)
+        for a in specific:
+            all_recommended_ids.add(a["id"])
+        all_recommended = [a for a in prompt_service.actions if a["id"] in all_recommended_ids]
+
+        # 返回全部动作
         all_actions = prompt_service.get_actions()
         return RecommendActionsResponse(
             success=True,
-            recommended=[{"id": a["id"], "name": a["name"], "description": a["description"], "preview": a.get("preview", "")} for a in recommended],
+            recommended=[{"id": a["id"], "name": a["name"], "description": a["description"], "preview": a.get("preview", "")} for a in all_recommended],
             all_actions=[{"id": a["id"], "name": a["name"], "description": a["description"], "preview": a.get("preview", "")} for a in all_actions]
         )
 

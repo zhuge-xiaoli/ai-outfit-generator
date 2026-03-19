@@ -703,6 +703,12 @@
                     <div class="action-tip" v-if="recommendedActions.length > 0" style="margin-top: 12px;">
                         💡 带"推荐"标签的动作更适合当前场景
                     </div>
+
+                    <!-- Scene Analyzing Loading -->
+                    <div v-if="isAnalyzingScene" style="margin-top: 16px; text-align: center;">
+                        <el-progress :percentage="analyzeProgress" status="success"></el-progress>
+                        <div style="font-size: 12px; color: #909399; margin-top: 8px;">正在分析场景...</div>
+                    </div>
                 </div>
 
                 <!-- Generate Button -->
@@ -854,6 +860,8 @@
                 const isDragOverClothing = ref(false);
                 const isDragOverScene = ref(false);
                 const isGenerating = ref(false);
+                const isAnalyzingScene = ref(false);
+                const analyzeProgress = ref(0);
                 const allActions = ref([]);
                 const recommendedActions = ref([]);
                 const selectedAction = ref(null);
@@ -991,10 +999,23 @@
                 // 推荐动作
                 const recommendActionsForScene = async (sceneImage) => {
                     console.log('Calling recommend-actions API...');
+                    isAnalyzingScene.value = true;
+                    analyzeProgress.value = 0;
+
+                    // 模拟进度条
+                    const progressInterval = setInterval(() => {
+                        if (analyzeProgress.value < 90) {
+                            analyzeProgress.value += Math.random() * 15;
+                        }
+                    }, 500);
+
                     try {
                         const res = await axios.post('/api/recommend-actions', {
                             scene_image: sceneImage
                         });
+
+                        clearInterval(progressInterval);
+                        analyzeProgress.value = 100;
 
                         console.log('API response:', res.data);
 
@@ -1022,6 +1043,11 @@
                     } catch (e) {
                         console.error('Failed to recommend actions:', e);
                         ElMessage.error('场景分析失败，请重试');
+                    } finally {
+                        setTimeout(() => {
+                            isAnalyzingScene.value = false;
+                            analyzeProgress.value = 0;
+                        }, 500);
                     }
                 };
 
@@ -1135,6 +1161,8 @@
                     isDragOverClothing,
                     isDragOverScene,
                     isGenerating,
+                    isAnalyzingScene,
+                    analyzeProgress,
                     allActions,
                     recommendedActions,
                     selectedAction,
