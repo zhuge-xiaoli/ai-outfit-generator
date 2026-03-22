@@ -75,13 +75,12 @@ class PromptService:
         specific = [a for a in self.actions if a["id"] in recommended_ids]
         return specific, universal
 
-    def generate_prompt(self, clothing_info: dict, action_id: str = None, scene_type: str = None) -> str:
+    def generate_prompt(self, clothing_info: dict, action_id: str = None, scene_type: str = None, lighting_id: str = None) -> str:
         """
         生成即梦提示词
         """
         # 如果没有指定动作，随机选择一个
         if not action_id:
-            import random
             action = random.choice(self.actions)
         else:
             action = next((a for a in self.actions if a["id"] == action_id), self.actions[0])
@@ -89,8 +88,10 @@ class PromptService:
         # 获取动作模板
         action_template = action["template"]
 
-        # 根据场景类型选择光线模板
-        if scene_type and "超市" in scene_type:
+        # 根据用户选择的光影ID或场景类型选择光线模板
+        if lighting_id and lighting_id in self.lighting:
+            lighting_template = self.lighting[lighting_id]
+        elif scene_type and "超市" in scene_type:
             lighting_template = self.lighting["supermarket"]
         elif scene_type and "室内" in scene_type:
             lighting_template = self.lighting["indoor"]

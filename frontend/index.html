@@ -603,32 +603,52 @@
                 <div class="upload-section">
                     <div class="upload-section-title">
                         👕 服装图片 <span class="required">*</span>
+                        <span style="color: #909399; font-weight: 400; margin-left: 8px;">(可上传多张)</span>
                     </div>
+
+                    <!-- 已上传的图片列表 -->
+                    <div v-if="clothingPreviews.length > 0" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                        <div
+                            v-for="(img, index) in clothingPreviews"
+                            :key="index"
+                            style="position: relative; width: 80px; height: 80px;"
+                        >
+                            <img
+                                :src="img.preview"
+                                style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 2px solid #67c23a;"
+                                alt="服装预览"
+                            >
+                            <el-button
+                                size="small"
+                                type="danger"
+                                circle
+                                style="position: absolute; top: -8px; right: -8px; padding: 4px;"
+                                @click.stop="removeClothingImage(index)"
+                            >
+                                ×
+                            </el-button>
+                        </div>
+                    </div>
+
+                    <!-- 上传按钮 -->
                     <div
                         class="upload-area"
-                        :class="{ dragover: isDragOverClothing, 'has-image': clothingPreview }"
+                        :class="{ dragover: isDragOverClothing }"
                         @click="triggerUpload('clothing')"
                         @dragover.prevent="isDragOverClothing = true"
                         @dragleave.prevent="isDragOverClothing = false"
                         @drop.prevent="handleDrop($event, 'clothing')"
                     >
-                        <template v-if="!clothingPreview">
-                            <div class="upload-icon">👔</div>
-                            <div class="upload-text">点击或拖拽上传服装图片</div>
-                            <div class="upload-hint">必填</div>
-                        </template>
-                        <template v-else>
-                            <img :src="clothingPreview" class="preview-image" alt="服装预览">
-                            <div class="preview-actions">
-                                <el-button size="small" @click.stop="clearImage('clothing')">删除</el-button>
-                            </div>
-                        </template>
+                        <div class="upload-icon">➕</div>
+                        <div class="upload-text">点击或拖拽添加服装图片</div>
+                        <div class="upload-hint">支持上传上衣、裤子、鞋子等</div>
                     </div>
                     <input
                         type="file"
                         ref="clothingInput"
                         style="display: none"
                         accept="image/*"
+                        multiple
                         @change="handleFileSelect($event, 'clothing')"
                     >
                 </div>
@@ -674,8 +694,27 @@
 
                 <!-- Scene Analysis Result -->
                 <div class="scene-analysis-tip" v-if="recommendedActions.length > 0">
-                    
+
                     已识别场景元素，智能推荐了 {{ recommendedActions.length }} 个匹配动作
+                </div>
+
+                <!-- Lighting Select -->
+                <div class="action-select" v-if="allLighting.length > 0">
+                    <div class="card-title">
+                        <span class="icon">💡</span>
+                        选择光影效果
+                    </div>
+                    <el-select v-model="selectedLighting" placeholder="选择光影效果" style="width: 100%;">
+                        <el-option
+                            v-for="item in allLighting"
+                            :key="item.id"
+                            :label="item.name"
+                            :value="item.id"
+                        >
+                            <span style="float: left">{{ item.name }}</span>
+                            <span style="float: right; color: #8492a6; font-size: 12px;">{{ item.description }}</span>
+                        </el-option>
+                    </el-select>
                 </div>
 
                 <!-- Action Select - Cards Grid -->
@@ -715,7 +754,7 @@
                     type="primary"
                     class="generate-btn"
                     :loading="isGenerating"
-                    :disabled="!clothingPreview"
+                    :disabled="clothingPreviews.length === 0"
                     @click="generate"
                 >
                     {{ isGenerating ? '生成中...' : '🚀 生成提示词和文案' }}
@@ -852,8 +891,7 @@
                 // State
                 const clothingInput = ref(null);
                 const sceneInput = ref(null);
-                const clothingPreview = ref('');
-                const clothingBase64 = ref('');
+                const clothingPreviews = ref([]);  // 支持多张图片
                 const scenePreview = ref('');
                 const sceneBase64 = ref('');
                 const isDragOverClothing = ref(false);
@@ -864,24 +902,38 @@
                 const allActions = ref([]);
                 const recommendedActions = ref([]);
                 const selectedAction = ref(null);
+                const allLighting = ref([]);
+                const selectedLighting = ref('');
                 const result = ref(null);
                 const errorMessage = ref('');
                 const largePreviewImage = ref('');
                 const historyList = ref([]);
                 const currentTab = ref('result');
 
-                // Load actions on mount
+                // Load actions and lighting on mount
                 onMounted(async () => {
                     try {
-                        const res = await axios.get('/api/actions');
-                        allActions.value = res.data.actions;
-                        // Default select first action
+                        // 加载动作模板
+                        const actionsRes = await axios.get('/api/actions');
+                        allActions.value = actionsRes.data.actions;
                         if (allActions.value.length > 0) {
                             selectedAction.value = allActions.value[0].id;
                         }
                     } catch (e) {
                         console.error('Failed to load actions:', e);
                     }
+
+                    try {
+                        // 加载光影模板
+                        const lightingRes = await axios.get('/api/lighting');
+                        allLighting.value = lightingRes.data.lighting;
+                        if (allLighting.value.length > 0) {
+                            selectedLighting.value = allLighting.value[0].id;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load lighting:', e);
+                    }
+
                     // 加载历史记录
                     loadHistory();
                 });
@@ -906,7 +958,7 @@
                         const item = {
                             id: Date.now(),
                             createdAt: new Date().toISOString(),
-                            clothingImage: data.clothingImage,
+                            clothingImages: data.clothingImages || [],
                             sceneImage: data.sceneImage,
                             actionId: data.actionId,
                             prompt: data.prompt,
@@ -982,8 +1034,11 @@
                     const reader = new FileReader();
                     reader.onload = async (e) => {
                         if (type === 'clothing') {
-                            clothingPreview.value = e.target.result;
-                            clothingBase64.value = e.target.result.split(',')[1];
+                            // 支持多张图片，添加到数组
+                            clothingPreviews.value.push({
+                                preview: e.target.result,
+                                base64: e.target.result.split(',')[1]
+                            });
                         } else {
                             scenePreview.value = e.target.result;
                             sceneBase64.value = e.target.result.split(',')[1];
@@ -1067,10 +1122,18 @@
                     largePreviewImage.value = imageUrl;
                 };
 
+                // 删除单张服装图片
+                const removeClothingImage = (index) => {
+                    clothingPreviews.value.splice(index, 1);
+                    if (clothingInput.value) {
+                        clothingInput.value.value = '';
+                    }
+                    result.value = null;
+                };
+
                 const clearImage = (type) => {
                     if (type === 'clothing') {
-                        clothingPreview.value = '';
-                        clothingBase64.value = '';
+                        clothingPreviews.value = [];
                         if (clothingInput.value) {
                             clothingInput.value.value = '';
                         }
@@ -1103,7 +1166,7 @@
 
                 // Generate
                 const generate = async () => {
-                    if (!clothingBase64.value) {
+                    if (clothingPreviews.value.length === 0) {
                         ElMessage.warning('请先上传服装图片');
                         return;
                     }
@@ -1114,16 +1177,17 @@
 
                     try {
                         const res = await axios.post('/api/generate', {
-                            clothing_image: clothingPreview.value,
+                            clothing_images: clothingPreviews.value.map(p => p.preview),
                             scene_image: scenePreview.value || null,
-                            action_id: selectedAction.value
+                            action_id: selectedAction.value,
+                            lighting_id: selectedLighting.value || null
                         });
 
                         if (res.data.success) {
                             result.value = res.data.data;
                             // 保存到历史记录
                             saveHistory({
-                                clothingImage: clothingPreview.value,
+                                clothingImages: clothingPreviews.value.map(p => p.preview),
                                 sceneImage: scenePreview.value,
                                 actionId: selectedAction.value,
                                 ...res.data.data
@@ -1155,7 +1219,8 @@
                 return {
                     clothingInput,
                     sceneInput,
-                    clothingPreview,
+                    clothingPreviews,
+                    removeClothingImage,
                     scenePreview,
                     isDragOverClothing,
                     isDragOverScene,
@@ -1165,6 +1230,8 @@
                     allActions,
                     recommendedActions,
                     selectedAction,
+                    allLighting,
+                    selectedLighting,
                     result,
                     errorMessage,
                     largePreviewImage,
