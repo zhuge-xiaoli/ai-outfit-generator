@@ -851,8 +851,10 @@
                                 <span class="history-item-time">{{ formatTime(item.createdAt) }}</span>
                                 <span class="history-item-delete" @click.stop="deleteHistory(index)">删除</span>
                             </div>
-                            <div class="history-images" v-if="item.clothingImage || item.sceneImage">
-                                <img v-if="item.clothingImage" :src="item.clothingImage" alt="服装">
+                            <div class="history-images" v-if="item.clothingImages || item.sceneImage">
+                                <template v-if="item.clothingImages">
+                                    <img v-for="(img, idx) in item.clothingImages" :key="idx" :src="img" alt="服装">
+                                </template>
                                 <img v-if="item.sceneImage" :src="item.sceneImage" alt="场景">
                             </div>
                             <div class="history-item-preview">
